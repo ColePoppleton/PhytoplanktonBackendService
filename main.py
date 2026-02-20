@@ -1,5 +1,6 @@
-import sys, logging, asyncio, uvicorn, torch, xarray as xr
-from fastapi import FastAPI, HTTPException
+import glob
+import sys, logging, asyncio, uvicorn, torch, xarray as xr, json
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Dict
@@ -11,6 +12,7 @@ from models.parameterizer import BoidParameterizer
 from engine.trainer import ModelTrainer
 from data.processing import DataManager
 from visualize_metrics import plot_training_results
+
 
 class DigitalTwinFormatter(logging.Formatter):
     def format(self, record):
@@ -26,13 +28,17 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 logger.propagate = False
 
+
+with open("config.json", "r") as f:
+    cfg = json.load(f)
+
 DATA_PATH = Path("data/copernicus_data.nc")
 WEIGHTS_PATH = Path("models/weights/swin_latest.pt")
 sim_engine = None
 predictor_model = None
 parameterizer = BoidParameterizer()
 dataset = None
-current_frame_idx = 12
+current_frame_idx = cfg["model"]["window_size"]
 training_status = {"status": "idle", "epoch": 0, "total_epochs": 0}
 
 
@@ -57,14 +63,13 @@ async def run_automated_pipeline():
     global predictor_model, DATA_PATH, training_status
     try:
         manager = DataManager(str(DATA_PATH))
-        manager.extract_subset(spatial_ratio=0.15, temporal_ratio=1.0)
+        manager.extract_subset(spatial_ratio=cfg["model"]["spatial_ratio"])
         loaders = manager.get_splits(variable="chl")
-
         trainer = ModelTrainer(predictor_model, next(predictor_model.parameters()).device)
-        log_path = await trainer.run_full_training(
-            loaders, epochs=50, save_path=WEIGHTS_PATH, status_callback=update_training_status
-        )
 
+        log_path = await trainer.run_full_training(
+            loaders, epochs=cfg["model"]["epochs"], save_path=WEIGHTS_PATH
+        )
         training_status["status"] = "complete"
         predictor_model.eval()
         plot_training_results(log_path)
@@ -77,33 +82,55 @@ async def run_automated_pipeline():
 async def lifespan(app: FastAPI):
     global sim_engine, predictor_model, dataset
     logger.info("=" * 50)
-    logger.info("INITIALIZING PHYTOPLANKTON DIGITAL TWIN BACKEND")
+    logger.info("INITIALIZING PHYTOPLANKTON DIGITAL TWIN")
     logger.info("=" * 50)
 
     if not DATA_PATH.exists():
-        ingestor = CopernicusIngestor(cache_dir="data")
+        ingestor = CopernicusIngestor()
         sync_config = {
-            "cmems_mod_glo_bgc_my_0.25deg_P1M-m": ["chl"],
-            "cmems_mod_glo_phy-all_my_0.25deg_P1M-m": ["sea_water_potential_temperature", "sea_water_salinity"]
+            cfg["data"]["variable_mapping"]["bgc_product"]: ["chl"],
+            cfg["data"]["variable_mapping"]["phy_product"]: [
+                cfg["data"]["variable_mapping"]["temp_name"],
+                cfg["data"]["variable_mapping"]["sal_name"]
+            ]
         }
-        dataset = ingestor.fetch_and_merge(sync_config, {"start": "2022-01-01", "end": "2024-11-30", "min_lon": -10.0,
-                                                         "max_lon": 10.0, "min_lat": 45.0, "max_lat": 55.0}, DATA_PATH)
+        dataset = ingestor.fetch_and_merge(sync_config, {
+            "start": cfg["data"]["start_date"], "end": cfg["data"]["end_date"],
+            "min_lon": cfg["data"]["min_lon"], "max_lon": cfg["data"]["max_lon"],
+            "min_lat": cfg["data"]["min_lat"], "max_lat": cfg["data"]["max_lat"]
+        }, DATA_PATH)
     else:
         dataset = xr.open_dataset(DATA_PATH)
 
-    if "sea_water_potential_temperature" in dataset:
-        dataset = dataset.rename({"sea_water_potential_temperature": "thetao", "sea_water_salinity": "so"})
+    if cfg["data"]["variable_mapping"]["temp_name"] in dataset:
+        dataset = dataset.rename({
+            cfg["data"]["variable_mapping"]["temp_name"]: "thetao",
+            cfg["data"]["variable_mapping"]["sal_name"]: "so"
+        })
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    predictor_model = SwinPredictor(img_size=64).to(device)
+    predictor_model = SwinPredictor(img_size=cfg["model"]["img_size"]).to(device)
+
     if WEIGHTS_PATH.exists():
+        logger.info(f"MODEL: Weights found. Loading state from {WEIGHTS_PATH}")
         predictor_model.load_state_dict(torch.load(WEIGHTS_PATH, map_location=device))
         predictor_model.eval()
+
+        log_files = glob.glob('logs/*.json')
+        if log_files:
+            latest_log = max(log_files, key=lambda x: Path(x).stat().st_mtime)
+            logger.info(f"PIPELINE: Found existing logs. Generating fresh graphs...")
+            plot_training_results(latest_log)
     else:
         asyncio.create_task(run_automated_pipeline())
 
-    sim_engine = PhytoplanktonSim(count=10000,
-                                  bounds={"min_lon": -10.0, "max_lon": 10.0, "min_lat": 45.0, "max_lat": 55.0})
+    sim_engine = PhytoplanktonSim(
+        count=cfg.get("simulation", {}).get("agent_count", 10000),
+        bounds={
+            "min_lon": cfg["data"]["min_lon"], "max_lon": cfg["data"]["max_lon"],
+            "min_lat": cfg["data"]["min_lat"], "max_lat": cfg["data"]["max_lat"]
+        }
+    )
     logger.info("STATUS: Digital Twin backend is ONLINE.")
     yield
     if dataset: dataset.close()
@@ -123,15 +150,20 @@ async def run_step():
     if current_frame_idx >= len(dataset.time):
         raise HTTPException(status_code=400, detail="End of dataset reached")
 
-    window = dataset["chl"].isel(time=slice(current_frame_idx - 12, current_frame_idx))
+    window = dataset["chl"].isel(time=slice(current_frame_idx - cfg["model"]["window_size"], current_frame_idx))
     input_tensor = torch.from_numpy(window.values).float().unsqueeze(0).unsqueeze(2)
 
     with torch.no_grad():
         prediction = predictor_model(input_tensor.to(next(predictor_model.parameters()).device))
 
     current_params = bridge_ml_to_simulation(prediction)
-    current_env = {'temp': dataset["thetao"].isel(time=current_frame_idx).values,
-                   'sal': dataset["so"].isel(time=current_frame_idx).values}
+
+    current_env = {
+        'temp': dataset["thetao"].isel(time=current_frame_idx, depth=0).values if "depth" in dataset["thetao"].dims else
+        dataset["thetao"].isel(time=current_frame_idx).values,
+        'sal': dataset["so"].isel(time=current_frame_idx, depth=0).values if "depth" in dataset["so"].dims else dataset[
+            "so"].isel(time=current_frame_idx).values
+    }
 
     sim_engine.step(current_env, current_params)
     current_frame_idx += 1

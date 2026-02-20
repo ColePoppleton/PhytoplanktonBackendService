@@ -1,0 +1,22 @@
+{
+  "data": {
+    "start_date": "2020-01-01",
+    "end_date": "2024-12-31",
+    "min_lon": -10.0, "max_lon": 10.0, "min_lat": 45.0, "max_lat": 55.0,
+    "variable_mapping": {
+      "bgc_product": "cmems_mod_glo_bgc_my_0.25deg_P1D-m",
+      "phy_product": "cmems_mod_glo_phy-all_my_0.25deg_P1D-m",
+      "temp_name": "sea_water_potential_temperature",
+      "sal_name": "sea_water_salinity"
+    }
+  },
+  "model": {
+    "window_size": 30,
+    "img_size": 64,
+    "epochs": 50,
+    "spatial_ratio": 0.15
+  },
+  "simulation": {
+    "agent_count": 10000
+  }
+}

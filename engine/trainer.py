@@ -17,7 +17,11 @@ class ModelTrainer:
     def train_epoch(self, loader: DataLoader):
         self.model.train()
         total_loss = 0
+        epoch_bytes = 0
         for x, y in loader:
+            batch_bytes = x.element_size() * x.nelement() + y.element_size() * y.nelement()
+            epoch_bytes += batch_bytes
+
             x, y = x.to(self.device), y.to(self.device)
             self.optimizer.zero_grad()
             output = self.model(x)
@@ -28,7 +32,7 @@ class ModelTrainer:
 
         torch.cuda.empty_cache()
         gc.collect()
-        return total_loss / len(loader)
+        return total_loss / len(loader), epoch_bytes
 
     def validate(self, loader: DataLoader):
         self.model.eval()
@@ -43,16 +47,23 @@ class ModelTrainer:
     async def run_full_training(self, loaders, epochs=50, save_path=None, status_callback=None):
         logger = TrainingLogger()
         for epoch in range(1, epochs + 1):
-            t_loss = self.train_epoch(loaders["train"])
+            t_loss, processed_bytes = self.train_epoch(loaders["train"])
             v_loss = self.validate(loaders["val"])
 
-            logger.log_step(epoch, "training", {"train_mse": t_loss, "val_mse": v_loss})
-            print(f"Epoch {epoch} | Train: {t_loss:.6f} | Val: {v_loss:.6f}")
+            logger.log_step(
+                epoch,
+                "training",
+                {"train_mse": t_loss, "val_mse": v_loss},
+                batch_bytes=processed_bytes
+            )
+
+            print(f"Epoch {epoch} | Train Loss: {t_loss:.6f} | Val Loss: {v_loss:.6f}")
 
             if status_callback:
                 await status_callback(epoch, epochs)
 
         if save_path:
+            save_path = Path(save_path)
             save_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(self.model.state_dict(), save_path)
 

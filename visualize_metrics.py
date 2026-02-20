@@ -4,38 +4,31 @@ import seaborn as sns
 from pathlib import Path
 
 plt.style.use('seaborn-v0_8-paper')
-sns.set_context("paper", font_scale=1.5)
 
 
-def plot_training_results(csv_path: str):
-    df = pd.read_csv(csv_path)
-
+def plot_training_results(json_path: str):
+    df = pd.read_json(json_path)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
 
-    sns.lineplot(data=df, x='epoch', y='train_mse', label='Training Loss', ax=ax1, linewidth=2)
-    sns.lineplot(data=df, x='epoch', y='val_mse', label='Validation Loss', ax=ax1, linewidth=2, linestyle='--')
-    ax1.set_title('Model Convergence (MSE)')
-    ax1.set_xlabel('Epoch')
-    ax1.set_ylabel('Mean Squared Error')
-    ax1.grid(True, alpha=0.3)
-    ax1.legend()
+    sns.lineplot(data=df, x='epoch', y='train_mse', label='Train', ax=ax1)
+    sns.lineplot(data=df, x='epoch', y='val_mse', label='Val', ax=ax1, linestyle='--')
+    ax1.set_title('Convergence (MSE)')
 
-    sns.lineplot(data=df, x='epoch', y='gpu_mem_mb', color='green', ax=ax2, linewidth=2)
-    ax2.set_title('Computational Efficiency')
-    ax2.set_xlabel('Epoch')
-    ax2.set_ylabel('GPU Memory Usage (MB)')
-    ax2.grid(True, alpha=0.3)
+    mem_col = 'memory_gpu_mb' if df['memory_gpu_mb'].max() > 0 else 'memory_ram_mb'
+    label = "GPU Memory (MB)" if mem_col == 'memory_gpu_mb' else "System RAM (MB)"
+
+    sns.lineplot(data=df, x='epoch', y=mem_col, color='green', ax=ax2)
+    ax2.set_title(f'Computational Efficiency ({label})')
+    ax2.set_ylabel('MB')
 
     plt.tight_layout()
-    output_filename = Path(csv_path).stem + "_plot.png"
-    plt.savefig(output_filename, dpi=300, bbox_inches='tight')
-    print(f"Visualization saved to {output_filename}")
-    plt.show()
+    plt.savefig(Path(json_path).stem + "_plot.png", dpi=300)
 
 
 if __name__ == "__main__":
-    log_file = "logs/SwinPredictor_metrics_1740071112.csv"
-    if Path(log_file).exists():
-        plot_training_results(log_file)
-    else:
-        print("Log file not found. Please ensure training has completed.")
+    import glob
+
+    log_files = glob.glob('logs/*.json')
+    if log_files:
+        latest = max(log_files, key=lambda x: Path(x).stat().st_mtime)
+        plot_training_results(latest)
