@@ -1,27 +1,21 @@
-import sys
-import logging
-from typing import Dict
-
-import uvicorn
-import torch
-import xarray as xr
+import sys, logging, asyncio, uvicorn, torch, xarray as xr
 from fastapi import FastAPI, HTTPException
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Dict
 
 from data.ingestion import CopernicusIngestor
 from models.transformer import SwinPredictor
 from engine.boids import PhytoplanktonSim
 from models.parameterizer import BoidParameterizer
+from engine.trainer import ModelTrainer
+from data.processing import DataManager
+from visualize_metrics import plot_training_results
 
 class DigitalTwinFormatter(logging.Formatter):
     def format(self, record):
-        prefix = {
-            logging.INFO: "  [SYSTEM] ",
-            logging.ERROR: " [!] ERROR ",
-            logging.WARNING: " [?] WARN  ",
-            logging.DEBUG: " [>] DEBUG "
-        }.get(record.levelno, "  ")
+        prefix = {logging.INFO: "  [SYSTEM] ", logging.ERROR: " [!] ERROR ", logging.WARNING: " [?] WARN  "}.get(
+            record.levelno, "  ")
         return f"{self.formatTime(record, '%H:%M:%S')}{prefix}{record.getMessage()}"
 
 
@@ -33,11 +27,50 @@ logger.setLevel(logging.INFO)
 logger.propagate = False
 
 DATA_PATH = Path("data/copernicus_data.nc")
+WEIGHTS_PATH = Path("models/weights/swin_latest.pt")
 sim_engine = None
 predictor_model = None
 parameterizer = BoidParameterizer()
 dataset = None
 current_frame_idx = 12
+training_status = {"status": "idle", "epoch": 0, "total_epochs": 0}
+
+
+def bridge_ml_to_simulation(prediction_tensor: torch.Tensor) -> Dict:
+    density_map = prediction_tensor.detach().cpu().numpy().squeeze()
+    params = parameterizer.get_parameters(density_map)
+    params.update({
+        "temp_min": 12.0, "temp_max": 25.0,
+        "sal_min": 30.0, "sal_max": 38.0,
+        "max_speed": params.get("speed", 2.0),
+        "perception": 0.5
+    })
+    return params
+
+
+async def update_training_status(epoch: int, total: int):
+    global training_status
+    training_status.update({"status": "training", "epoch": epoch, "total_epochs": total})
+
+
+async def run_automated_pipeline():
+    global predictor_model, DATA_PATH, training_status
+    try:
+        manager = DataManager(str(DATA_PATH))
+        manager.extract_subset(spatial_ratio=0.15, temporal_ratio=1.0)
+        loaders = manager.get_splits(variable="chl")
+
+        trainer = ModelTrainer(predictor_model, next(predictor_model.parameters()).device)
+        log_path = await trainer.run_full_training(
+            loaders, epochs=50, save_path=WEIGHTS_PATH, status_callback=update_training_status
+        )
+
+        training_status["status"] = "complete"
+        predictor_model.eval()
+        plot_training_results(log_path)
+    except Exception as e:
+        logger.error(f"PIPELINE ERROR: {e}")
+        training_status["status"] = "failed"
 
 
 @asynccontextmanager
@@ -48,40 +81,30 @@ async def lifespan(app: FastAPI):
     logger.info("=" * 50)
 
     if not DATA_PATH.exists():
-        logger.info("DATA CHECK: Initializing fresh data ingestion pipeline.")
         ingestor = CopernicusIngestor(cache_dir="data")
-
         sync_config = {
             "cmems_mod_glo_bgc_my_0.25deg_P1M-m": ["chl"],
-            "cmems_mod_glo_phy-all_my_0.25deg_P1M-m": ["thetao", "so"]
+            "cmems_mod_glo_phy-all_my_0.25deg_P1M-m": ["sea_water_potential_temperature", "sea_water_salinity"]
         }
-
-        common_constraints = {
-            "start": "2025-01-01", "end": "2025-03-31",
-            "min_lon": -10.0, "max_lon": 10.0,
-            "min_lat": 45.0, "max_lat": 55.0,
-        }
-
-        try:
-            dataset = ingestor.fetch_and_merge(sync_config, common_constraints, DATA_PATH)
-        except Exception as e:
-            logger.error(f"FATAL: Pipeline failure during data sync. {e}")
-            raise
+        dataset = ingestor.fetch_and_merge(sync_config, {"start": "2022-01-01", "end": "2024-11-30", "min_lon": -10.0,
+                                                         "max_lon": 10.0, "min_lat": 45.0, "max_lat": 55.0}, DATA_PATH)
     else:
-        logger.info(f"DATA CHECK: Using existing merged dataset at {DATA_PATH}.")
         dataset = xr.open_dataset(DATA_PATH)
 
-    logger.info("MODEL: Loading Swin Transformer...")
+    if "sea_water_potential_temperature" in dataset:
+        dataset = dataset.rename({"sea_water_potential_temperature": "thetao", "sea_water_salinity": "so"})
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     predictor_model = SwinPredictor(img_size=64).to(device)
-    predictor_model.eval()
+    if WEIGHTS_PATH.exists():
+        predictor_model.load_state_dict(torch.load(WEIGHTS_PATH, map_location=device))
+        predictor_model.eval()
+    else:
+        asyncio.create_task(run_automated_pipeline())
 
-    logger.info("SIMULATION: Spawning 10,000 Lagrangian agents...")
-    bounds = {"min_lon": -10.0, "max_lon": 10.0, "min_lat": 45.0, "max_lat": 55.0}
-    sim_engine = PhytoplanktonSim(count=10000, bounds=bounds)
-
+    sim_engine = PhytoplanktonSim(count=10000,
+                                  bounds={"min_lon": -10.0, "max_lon": 10.0, "min_lat": 45.0, "max_lat": 55.0})
     logger.info("STATUS: Digital Twin backend is ONLINE.")
-    logger.info("-" * 50)
     yield
     if dataset: dataset.close()
 
@@ -89,63 +112,39 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="Phytoplankton Digital Twin Backend", lifespan=lifespan)
 
 
-def bridge_ml_to_simulation(prediction_tensor: torch.Tensor) -> Dict:
-    density_map = prediction_tensor.detach().cpu().numpy().squeeze()
-    params = parameterizer.get_parameters(density_map)
-
-    params.update({
-        "temp_min": 12.0, "temp_max": 25.0,
-        "sal_min": 30.0, "sal_max": 38.0,
-        "max_speed": params.get("speed", 2.0),
-        "perception": 0.5
-    })
-    return params
+@app.get("/model/status")
+async def get_model_status():
+    return training_status
 
 
 @app.post("/simulation/step")
 async def run_step():
     global current_frame_idx, dataset, sim_engine, predictor_model
-
     if current_frame_idx >= len(dataset.time):
-        logger.warning("Simulation reached end of temporal dataset.")
         raise HTTPException(status_code=400, detail="End of dataset reached")
 
     window = dataset["chl"].isel(time=slice(current_frame_idx - 12, current_frame_idx))
     input_tensor = torch.from_numpy(window.values).float().unsqueeze(0).unsqueeze(2)
 
-    device = next(predictor_model.parameters()).device
     with torch.no_grad():
-        prediction = predictor_model(input_tensor.to(device))
+        prediction = predictor_model(input_tensor.to(next(predictor_model.parameters()).device))
 
     current_params = bridge_ml_to_simulation(prediction)
-
-    current_env = {
-        'temp': dataset["thetao"].isel(time=current_frame_idx).values,
-        'sal': dataset["so"].isel(time=current_frame_idx).values
-    }
+    current_env = {'temp': dataset["thetao"].isel(time=current_frame_idx).values,
+                   'sal': dataset["so"].isel(time=current_frame_idx).values}
 
     sim_engine.step(current_env, current_params)
     current_frame_idx += 1
-
-    logger.debug(f"Step {current_frame_idx} complete. Active agents: {len(sim_engine.positions)}")
-
-    return {
-        "status": "success",
-        "frame": current_frame_idx,
-        "agent_count": len(sim_engine.positions),
-        "params": current_params
-    }
+    return {"status": "success", "frame": current_frame_idx, "agent_count": len(sim_engine.positions),
+            "params": current_params}
 
 
 @app.get("/simulation/state")
 async def get_state():
     if sim_engine:
-        return {
-            "positions": sim_engine.positions.tolist(),
-            "count": len(sim_engine.positions)
-        }
-    return {"error": "Simulation engine not initialized"}
+        return {"positions": sim_engine.positions.tolist(), "count": len(sim_engine.positions)}
+    return {"error": "Not initialized"}
+
 
 if __name__ == "__main__":
-    logger.info("Starting local Uvicorn server...")
     uvicorn.run(app, host="127.0.0.1", port=8000)

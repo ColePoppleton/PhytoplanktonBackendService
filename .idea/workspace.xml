@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="1385e501-f717-4217-9c67-5a760b81c91e" name="Changes" comment="Fix: Main.py updated&#10;&#10;Desc: Main.py updated to support FastAPI and the full program pipeline">
-      <change afterPath="$PROJECT_DIR$/models/parameterizer.py" afterDir="false" />
+    <list default="true" id="1385e501-f717-4217-9c67-5a760b81c91e" name="Changes" comment="Fix: Dataset Selection&#10;&#10;Desc: FastAPI Causing some async issues with calling the dataset">
+      <change afterPath="$PROJECT_DIR$/visualize_metrics.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/ingestion.py" beforeDir="false" afterPath="$PROJECT_DIR$/data/ingestion.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/engine/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/engine/trainer.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/models/transformer.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/transformer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -116,7 +115,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771605291576</updated>
     </task>
-    <option name="localTasksCounter" value="7" />
+    <task id="LOCAL-00007" summary="Fix: Dataset Selection&#10;&#10;Desc: FastAPI Causing some async issues with calling the dataset">
+      <option name="closed" value="true" />
+      <created>1771606646770</created>
+      <option name="number" value="00007" />
+      <option name="presentableId" value="LOCAL-00007" />
+      <option name="project" value="LOCAL" />
+      <updated>1771606646770</updated>
+    </task>
+    <option name="localTasksCounter" value="8" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -126,6 +133,7 @@
     <MESSAGE value="Feat: Data Ingestion and Logger implemented&#10;&#10;Desc: Implementeded automatic downloads from CopernicusMarine as well as a logging feature" />
     <MESSAGE value="Feat: Lagrangian Agent Based Model Implemented&#10;&#10;Desc: Implementeded LABM as well as KD tree to bypass O(n^2) complexity" />
     <MESSAGE value="Fix: Main.py updated&#10;&#10;Desc: Main.py updated to support FastAPI and the full program pipeline" />
-    <option name="LAST_COMMIT_MESSAGE" value="Fix: Main.py updated&#10;&#10;Desc: Main.py updated to support FastAPI and the full program pipeline" />
+    <MESSAGE value="Fix: Dataset Selection&#10;&#10;Desc: FastAPI Causing some async issues with calling the dataset" />
+    <option name="LAST_COMMIT_MESSAGE" value="Fix: Dataset Selection&#10;&#10;Desc: FastAPI Causing some async issues with calling the dataset" />
   </component>
 </project>
