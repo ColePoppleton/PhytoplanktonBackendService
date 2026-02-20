@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="1385e501-f717-4217-9c67-5a760b81c91e" name="Changes" comment="Init">
-      <change afterPath="$PROJECT_DIR$/data/processing.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/engine/trainer.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/transformer.py" afterDir="false" />
+    <list default="true" id="1385e501-f717-4217-9c67-5a760b81c91e" name="Changes" comment="Feat: Swin Transformers implemented&#10;&#10;Desc: Swin transformers have been implemented as well as the data preprocesing.">
+      <change afterPath="$PROJECT_DIR$/models/base.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/models/lstm.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -74,11 +72,20 @@
       <option name="project" value="LOCAL" />
       <updated>1771604048653</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Feat: Swin Transformers implemented&#10;&#10;Desc: Swin transformers have been implemented as well as the data preprocesing.">
+      <option name="closed" value="true" />
+      <created>1771604348133</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1771604348133</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Init" />
-    <option name="LAST_COMMIT_MESSAGE" value="Init" />
+    <MESSAGE value="Feat: Swin Transformers implemented&#10;&#10;Desc: Swin transformers have been implemented as well as the data preprocesing." />
+    <option name="LAST_COMMIT_MESSAGE" value="Feat: Swin Transformers implemented&#10;&#10;Desc: Swin transformers have been implemented as well as the data preprocesing." />
   </component>
 </project>
