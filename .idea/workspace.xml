@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="1385e501-f717-4217-9c67-5a760b81c91e" name="Changes" comment="Feat: Data Ingestion and Logger implemented&#10;&#10;Desc: Implementeded automatic downloads from CopernicusMarine as well as a logging feature">
-      <change afterPath="$PROJECT_DIR$/engine/boids.py" afterDir="false" />
+    <list default="true" id="1385e501-f717-4217-9c67-5a760b81c91e" name="Changes" comment="Feat: Lagrangian Agent Based Model Implemented&#10;&#10;Desc: Implementeded LABM as well as KD tree to bypass O(n^2) complexity">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -95,7 +95,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771604630439</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="Feat: Lagrangian Agent Based Model Implemented&#10;&#10;Desc: Implementeded LABM as well as KD tree to bypass O(n^2) complexity">
+      <option name="closed" value="true" />
+      <created>1771604845535</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1771604845535</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -103,6 +111,7 @@
     <MESSAGE value="Feat: Swin Transformers implemented&#10;&#10;Desc: Swin transformers have been implemented as well as the data preprocesing." />
     <MESSAGE value="Feat: Abstraction Layer and LSTM implemented&#10;&#10;Desc: Abstraction layer between the models and the data has been implemented as well as implemented the LSTM" />
     <MESSAGE value="Feat: Data Ingestion and Logger implemented&#10;&#10;Desc: Implementeded automatic downloads from CopernicusMarine as well as a logging feature" />
-    <option name="LAST_COMMIT_MESSAGE" value="Feat: Data Ingestion and Logger implemented&#10;&#10;Desc: Implementeded automatic downloads from CopernicusMarine as well as a logging feature" />
+    <MESSAGE value="Feat: Lagrangian Agent Based Model Implemented&#10;&#10;Desc: Implementeded LABM as well as KD tree to bypass O(n^2) complexity" />
+    <option name="LAST_COMMIT_MESSAGE" value="Feat: Lagrangian Agent Based Model Implemented&#10;&#10;Desc: Implementeded LABM as well as KD tree to bypass O(n^2) complexity" />
   </component>
 </project>
