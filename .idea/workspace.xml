@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="1385e501-f717-4217-9c67-5a760b81c91e" name="Changes" comment="Feat: Swin Transformers implemented&#10;&#10;Desc: Swin transformers have been implemented as well as the data preprocesing.">
-      <change afterPath="$PROJECT_DIR$/models/base.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/models/lstm.py" afterDir="false" />
+    <list default="true" id="1385e501-f717-4217-9c67-5a760b81c91e" name="Changes" comment="Feat: Abstraction Layer and LSTM implemented&#10;&#10;Desc: Abstraction layer between the models and the data has been implemented as well as implemented the LSTM">
+      <change afterPath="$PROJECT_DIR$/data/ingestion.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/engine/logger.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/engine/trainer.py" beforeDir="false" afterPath="$PROJECT_DIR$/engine/trainer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -80,12 +81,21 @@
       <option name="project" value="LOCAL" />
       <updated>1771604348133</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="Feat: Abstraction Layer and LSTM implemented&#10;&#10;Desc: Abstraction layer between the models and the data has been implemented as well as implemented the LSTM">
+      <option name="closed" value="true" />
+      <created>1771604430965</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1771604430965</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Init" />
     <MESSAGE value="Feat: Swin Transformers implemented&#10;&#10;Desc: Swin transformers have been implemented as well as the data preprocesing." />
-    <option name="LAST_COMMIT_MESSAGE" value="Feat: Swin Transformers implemented&#10;&#10;Desc: Swin transformers have been implemented as well as the data preprocesing." />
+    <MESSAGE value="Feat: Abstraction Layer and LSTM implemented&#10;&#10;Desc: Abstraction layer between the models and the data has been implemented as well as implemented the LSTM" />
+    <option name="LAST_COMMIT_MESSAGE" value="Feat: Abstraction Layer and LSTM implemented&#10;&#10;Desc: Abstraction layer between the models and the data has been implemented as well as implemented the LSTM" />
   </component>
 </project>

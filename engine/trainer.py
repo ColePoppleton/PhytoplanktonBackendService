@@ -1,5 +1,8 @@
+import torch
 import torch.optim as optim
 import gc
+from torch import nn
+from torch.utils.data import DataLoader
 
 
 class ModelTrainer:
