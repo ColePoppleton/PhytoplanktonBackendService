@@ -1,5 +1,7 @@
+import torch
 import torch.nn as nn
 from timm.models.swin_transformer import SwinTransformer
+from typing import Tuple, Dict
 
 
 class SpatiotemporalLSTM(nn.Module):
